@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Minus, X, Divide, ArrowRight, Volume2, VolumeX, Clock } from "lucide-react"
+import { Plus, Minus, X, Divide, ArrowRight, Volume2, VolumeX, Home, Sparkles } from "lucide-react"
 import confetti from "canvas-confetti"
 
 import { Button } from "@/components/ui/button"
@@ -10,12 +10,12 @@ import { Card } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { GameScreen } from "@/components/game-screen"
 import { ScoreScreen } from "@/components/score-screen"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { SplashScreen } from "@/components/splash-screen"
 
 type Operation = "addition" | "subtraction" | "multiplication" | "division"
 
 export function MathGame() {
-  const [gameState, setGameState] = useState<"setup" | "playing" | "score">("setup")
+  const [gameState, setGameState] = useState<"splash" | "setup" | "playing" | "score">("splash")
   const [operation, setOperation] = useState<Operation>("addition")
   const [number, setNumber] = useState<number>(1)
   const [rounds, setRounds] = useState<number>(5)
@@ -23,7 +23,8 @@ export function MathGame() {
   const [currentRound, setCurrentRound] = useState<number>(1)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
-  const [timerDuration, setTimerDuration] = useState<number>(10) // Default to 10 seconds
+  const [timerDuration, setTimerDuration] = useState<number>(10)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   // Sound references
   const buttonSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -180,23 +181,64 @@ export function MathGame() {
     }
   }
 
+  const handleSplashComplete = () => {
+    setGameState("setup")
+  }
+
   return (
     <div className="container mx-auto max-w-md">
-      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center mb-6 relative">
-        <h1 className="text-4xl font-bold text-purple-600 mb-2">Math Adventure</h1>
-        <p className="text-lg text-purple-500">Learn math the fun way!</p>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-0 top-0 h-8 w-8 rounded-full"
-          onClick={toggleSound}
-        >
-          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-        </Button>
-      </motion.div>
-
       <AnimatePresence mode="wait">
+        {gameState === "splash" && <SplashScreen onComplete={handleSplashComplete} />}
+
+        {gameState !== "splash" && (
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-center mb-6 relative"
+          >
+            <div className="flex items-center justify-center">
+              <motion.div
+                className="mr-3 text-4xl"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 3 }}
+              >
+                🧮
+              </motion.div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
+                Math Adventure
+              </h1>
+              <motion.div
+                className="ml-3"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 10, ease: "linear" }}
+              >
+                <Sparkles className="h-6 w-6 text-yellow-400" />
+              </motion.div>
+            </div>
+            <p className="text-lg text-purple-500">Learn math the fun way!</p>
+
+            <div className="absolute right-0 top-0 flex gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={toggleSound}>
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+
+              {gameState !== "setup" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => {
+                    playSound("button")
+                    resetGame()
+                  }}
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {gameState === "setup" && (
           <motion.div
             key="setup"
@@ -205,104 +247,187 @@ export function MathGame() {
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="p-6 shadow-xl bg-white rounded-3xl border-4 border-purple-300">
+            <Card className="p-6 shadow-xl bg-white rounded-3xl border-8 border-purple-300">
               <motion.div
-                className="absolute -top-6 -right-6 w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center text-3xl"
-                animate={{ rotate: [0, 10, -10, 10, 0] }}
-                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 3 }}
+                className="absolute -top-6 -right-6 w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl shadow-lg"
+                animate={{
+                  rotate: [0, 10, -10, 10, 0],
+                  y: [0, -5, 0],
+                }}
+                transition={{
+                  rotate: { repeat: Number.POSITIVE_INFINITY, duration: 3 },
+                  y: { repeat: Number.POSITIVE_INFINITY, duration: 2, delay: 1 },
+                }}
               >
                 🧮
               </motion.div>
 
-              <h2 className="text-2xl font-bold text-center mb-6 text-purple-700">Game Setup</h2>
+              <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
+                Game Setup
+              </h2>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-purple-600">Choose Operation</h3>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
+                  <motion.span
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
+                    className="mr-2"
+                  >
+                    🎮
+                  </motion.span>
+                  Choose Operation
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
                   {(["addition", "subtraction", "multiplication", "division"] as Operation[]).map((op) => (
-                    <Button
-                      key={op}
-                      variant={operation === op ? "default" : "outline"}
-                      className={`h-16 text-lg ${operation === op ? "bg-purple-500 hover:bg-purple-600" : "border-purple-200"}`}
-                      onClick={() => {
-                        setOperation(op)
-                        playSound("button")
-                      }}
-                    >
-                      <div className="flex flex-col items-center">
-                        {getOperationIcon(op)}
-                        <span className="mt-1">{getOperationName(op)}</span>
-                      </div>
-                    </Button>
+                    <motion.div key={op} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button
+                        variant={operation === op ? "default" : "outline"}
+                        className={`h-20 text-lg w-full ${
+                          operation === op
+                            ? "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-4 border-indigo-300"
+                            : "border-4 border-purple-200"
+                        }`}
+                        onClick={() => {
+                          setOperation(op)
+                          playSound("button")
+                        }}
+                      >
+                        <div className="flex flex-col items-center">
+                          {getOperationIcon(op)}
+                          <span className="mt-2 font-bold">{getOperationName(op)}</span>
+                        </div>
+                      </Button>
+                    </motion.div>
                   ))}
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-purple-600">Practice with Number</h3>
-                <div className="grid grid-cols-5 gap-2">
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
+                    className="mr-2"
+                  >
+                    🔢
+                  </motion.span>
+                  Practice with Number
+                </h3>
+                <div className="grid grid-cols-5 gap-3">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <Button
-                      key={num}
-                      variant={number === num ? "default" : "outline"}
-                      className={`h-12 w-12 text-lg ${number === num ? "bg-pink-500 hover:bg-pink-600" : "border-pink-200"}`}
-                      onClick={() => {
-                        setNumber(num)
-                        playSound("button")
-                      }}
-                    >
-                      {num}
-                    </Button>
+                    <motion.div key={num} whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant={number === num ? "default" : "outline"}
+                        className={`h-16 w-16 text-2xl font-bold ${
+                          number === num
+                            ? "bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 border-4 border-pink-300"
+                            : "border-4 border-pink-200"
+                        }`}
+                        onClick={() => {
+                          setNumber(num)
+                          playSound("button")
+                        }}
+                      >
+                        {num}
+                      </Button>
+                    </motion.div>
                   ))}
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-purple-600">Number of Rounds: {rounds}</h3>
-                <Slider
-                  defaultValue={[5]}
-                  max={30}
-                  min={5}
-                  step={5}
-                  onValueChange={(value) => setRounds(value[0])}
-                  className="py-4"
-                />
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 10, ease: "linear" }}
+                    className="mr-2"
+                  >
+                    🔄
+                  </motion.span>
+                  Number of Rounds: {rounds}
+                </h3>
+                <div className="px-4">
+                  <Slider
+                    defaultValue={[5]}
+                    max={30}
+                    min={5}
+                    step={5}
+                    onValueChange={(value) => setRounds(value[0])}
+                    className="py-6"
+                  />
+                  <div className="flex justify-between text-sm text-purple-500 mt-2">
+                    <span>5</span>
+                    <span>15</span>
+                    <span>30</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Subtle timer settings */}
-              <div className="mb-8 flex items-center justify-between">
-                <div className="flex-grow">
-                  <h3 className="text-lg font-semibold mb-3 text-purple-600">Answer Time: {timerDuration}s</h3>
+              <div className="mb-10">
+                <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}
+                    className="mr-2"
+                  >
+                    ⏱️
+                  </motion.span>
+                  Answer Time: {timerDuration}s
+                </h3>
+                <div className="px-4">
                   <Slider
                     defaultValue={[10]}
                     min={5}
                     max={20}
                     step={1}
                     onValueChange={(value) => setTimerDuration(value[0])}
-                    className="py-4"
+                    className="py-6"
                   />
+                  <div className="flex justify-between text-sm text-purple-500 mt-2">
+                    <span>5s</span>
+                    <span>10s</span>
+                    <span>20s</span>
+                  </div>
                 </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="ml-2">
-                      <Clock className="h-4 w-4 text-purple-500" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="text-sm text-gray-600">
-                      <p>Adjust how much time is given to answer each question.</p>
-                      <p className="mt-2">Shorter times make the game more challenging!</p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
               </div>
 
-              <Button
-                onClick={startGame}
-                className="w-full h-14 text-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl border-2 border-purple-400"
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={startGame}
+                  className="w-full h-20 text-2xl font-bold bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white rounded-xl border-4 border-indigo-400 shadow-lg"
+                >
+                  Start Learning <ArrowRight className="ml-3 h-6 w-6" />
+                </Button>
+              </motion.div>
+
+              {/* Floating characters */}
+              <motion.div
+                className="absolute -bottom-10 -left-10 w-24 h-24 bg-blue-400 rounded-full flex items-center justify-center text-4xl shadow-lg"
+                animate={{
+                  y: [0, -10, 0],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  y: { repeat: Number.POSITIVE_INFINITY, duration: 2 },
+                  rotate: { repeat: Number.POSITIVE_INFINITY, duration: 3, delay: 0.5 },
+                }}
               >
-                Start Learning <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+                🦄
+              </motion.div>
+
+              <motion.div
+                className="absolute -bottom-5 -right-5 w-16 h-16 bg-green-400 rounded-full flex items-center justify-center text-3xl shadow-lg"
+                animate={{
+                  y: [0, -8, 0],
+                  x: [0, 5, 0],
+                }}
+                transition={{
+                  y: { repeat: Number.POSITIVE_INFINITY, duration: 1.5, delay: 0.2 },
+                  x: { repeat: Number.POSITIVE_INFINITY, duration: 2, delay: 0.7 },
+                }}
+              >
+                🐢
+              </motion.div>
             </Card>
           </motion.div>
         )}

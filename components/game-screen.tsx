@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Plus, Minus, X, Divide, Volume2, VolumeX } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,7 @@ export function GameScreen({
   totalRounds,
   onAnswer,
   score,
-  timerDuration = 10, // Default to 10 seconds now
+  timerDuration = 10,
 }: GameScreenProps) {
   const [question, setQuestion] = useState({ num1: 0, num2: 0, answer: 0 })
   const [options, setOptions] = useState<number[]>([])
@@ -220,10 +220,10 @@ export function GameScreen({
     setAnswered(true)
     setIsCorrect(false)
 
-    // Delay moving to next question
+    // Delay moving to next question - longer for learning
     setTimeout(() => {
       onAnswer(false)
-    }, 1800)
+    }, 3000) // 3 seconds to learn from mistake
   }
 
   const handleOptionSelect = (option: number) => {
@@ -243,22 +243,25 @@ export function GameScreen({
       playSound(correct ? "correct" : "incorrect")
     }, 100)
 
-    // Delay moving to next question
-    setTimeout(() => {
-      onAnswer(correct)
-    }, 1800)
+    // Delay moving to next question - longer delay for incorrect answers
+    setTimeout(
+      () => {
+        onAnswer(correct)
+      },
+      correct ? 1800 : 3000,
+    ) // 3 seconds for wrong answers to give time to learn
   }
 
   const getOperationSymbol = () => {
     switch (operation) {
       case "addition":
-        return <Plus className="h-10 w-10 text-purple-500" />
+        return <Plus className="h-12 w-12 text-purple-500" />
       case "subtraction":
-        return <Minus className="h-10 w-10 text-purple-500" />
+        return <Minus className="h-12 w-12 text-purple-500" />
       case "multiplication":
-        return <X className="h-10 w-10 text-purple-500" />
+        return <X className="h-12 w-12 text-purple-500" />
       case "division":
-        return <Divide className="h-10 w-10 text-purple-500" />
+        return <Divide className="h-12 w-12 text-purple-500" />
     }
   }
 
@@ -277,15 +280,15 @@ export function GameScreen({
       transition={{ duration: 0.3 }}
       className="relative"
     >
-      {/* Animated background elements */}
+      {/* Enhanced animated background elements */}
       <div className="absolute -z-10 inset-0 overflow-hidden">
-        {[...Array(15)].map((_, i) => (
+        {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full bg-gradient-to-r from-purple-300 to-pink-300 opacity-70"
+            className="absolute rounded-full bg-gradient-to-r from-indigo-300 to-pink-300 opacity-70"
             style={{
-              width: Math.random() * 100 + 50,
-              height: Math.random() * 100 + 50,
+              width: Math.random() * 120 + 50,
+              height: Math.random() * 120 + 50,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
             }}
@@ -293,6 +296,7 @@ export function GameScreen({
               x: [0, Math.random() * 100 - 50, 0],
               y: [0, Math.random() * 100 - 50, 0],
               rotate: [0, Math.random() * 360, 0],
+              scale: [1, Math.random() * 0.3 + 0.8, 1],
             }}
             transition={{
               duration: Math.random() * 10 + 10,
@@ -303,46 +307,82 @@ export function GameScreen({
         ))}
       </div>
 
-      <Card className="p-6 shadow-xl bg-white/90 backdrop-blur-sm rounded-3xl border-4 border-purple-300">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-purple-600 font-bold text-lg">
+      <Card className="p-8 shadow-xl bg-white/90 backdrop-blur-sm rounded-3xl border-8 border-indigo-300">
+        <div className="flex justify-between items-center mb-6">
+          <motion.div
+            className="text-indigo-600 font-bold text-xl px-4 py-2 bg-indigo-100 rounded-full"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            animate={{ y: [0, -3, 0] }}
+            transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
+          >
             Round {currentRound}/{totalRounds}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={toggleSound}>
-              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </motion.div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={toggleSound}>
+              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
             </Button>
-            <div className="text-pink-600 font-bold text-lg">Score: {score}</div>
+            <motion.div
+              className="text-pink-600 font-bold text-xl px-4 py-2 bg-pink-100 rounded-full"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                scale: score > 0 && score % 3 === 0 ? [1, 1.1, 1] : 1,
+                rotate: score > 0 && score % 3 === 0 ? [0, 5, -5, 0] : 0,
+              }}
+              transition={{
+                scale: { repeat: 3, duration: 0.3 },
+                rotate: { repeat: 3, duration: 0.5 },
+              }}
+            >
+              Score: {score}
+            </motion.div>
           </div>
         </div>
 
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-sm font-medium text-purple-600">Progress</span>
-            <motion.span
-              className="text-sm font-bold text-pink-600"
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-lg font-medium text-indigo-600">Progress</span>
+            <motion.div
+              className="flex items-center gap-1 text-lg font-bold text-pink-600 px-3 py-1 bg-pink-50 rounded-full"
               initial={{ scale: 1 }}
-              animate={{ scale: timeLeft <= timerDuration * 0.2 ? [1, 1.2, 1] : 1 }}
-              transition={{ repeat: timeLeft <= timerDuration * 0.2 ? Number.POSITIVE_INFINITY : 0, duration: 0.5 }}
+              animate={{
+                scale: timeLeft <= timerDuration * 0.2 ? [1, 1.2, 1] : 1,
+                x: timeLeft <= timerDuration * 0.2 ? [0, 5, -5, 0] : 0,
+              }}
+              transition={{
+                repeat: timeLeft <= timerDuration * 0.2 ? Number.POSITIVE_INFINITY : 0,
+                duration: 0.5,
+              }}
             >
-              Time: {timeLeft}s
-            </motion.span>
+              <span>{timeLeft}s</span>
+            </motion.div>
           </div>
           <div className="relative pt-1">
-            <div className="overflow-hidden h-4 text-xs flex rounded-full bg-purple-100">
+            <div className="overflow-hidden h-8 text-xs flex rounded-full bg-indigo-100">
               <motion.div
-                className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full"
+                className="bg-indigo-500 h-full rounded-full flex items-center justify-center"
                 style={{ width: `${(currentRound / totalRounds) * 100}%` }}
                 initial={{ width: `${((currentRound - 1) / totalRounds) * 100}%` }}
                 animate={{ width: `${(currentRound / totalRounds) * 100}%` }}
                 transition={{ duration: 0.5 }}
-              />
+              >
+                {currentRound > totalRounds / 3 && (
+                  <motion.span
+                    className="text-white font-bold"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
+                  >
+                    {Math.round((currentRound / totalRounds) * 100)}%
+                  </motion.span>
+                )}
+              </motion.div>
             </div>
           </div>
-          <div className="relative pt-1 mt-2">
-            <div className="overflow-hidden h-2 text-xs flex rounded-full bg-pink-100">
+          <div className="relative pt-1 mt-3">
+            <div className="overflow-hidden h-8 text-xs flex rounded-full bg-pink-100">
               <motion.div
-                className="bg-gradient-to-r from-pink-500 to-red-500 h-full rounded-full"
+                className="bg-pink-500 h-full rounded-full relative"
                 initial={{ width: "100%" }}
                 animate={{ width: `${(timeLeft / timerDuration) * 100}%` }}
                 transition={{ duration: 1, ease: "linear" }}
@@ -351,139 +391,96 @@ export function GameScreen({
           </div>
         </div>
 
-        {/* Question display */}
+        {/* Enhanced Question display */}
         <motion.div
-          className="bg-gradient-to-r from-purple-100 to-pink-100 p-8 rounded-xl mb-8 text-center relative"
+          className="bg-white p-8 rounded-3xl mb-8 text-center relative shadow-md"
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.3 }}
           layout
         >
-          {/* Decorative elements */}
-          <motion.div
-            className="absolute -top-4 -left-4 h-12 w-12 bg-yellow-300 rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          />
-          <motion.div
-            className="absolute -bottom-4 -right-4 h-12 w-12 bg-pink-300 rounded-full"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          />
-
-          <div className="flex items-center justify-center text-5xl font-bold gap-6">
-            <motion.span
-              initial={{ scale: 0.5, opacity: 0, rotateY: 180 }}
-              animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-              transition={{ delay: 0.1, type: "spring" }}
-              className="bg-white h-24 w-24 flex items-center justify-center rounded-2xl shadow-md text-purple-700 border-4 border-purple-200"
-            >
-              {question.num1}
-            </motion.span>
+          <div className="flex items-center justify-center text-7xl font-bold gap-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-white rounded-full shadow-md -z-10" />
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: "spring" }}
+                className="text-indigo-700 px-8 py-12"
+              >
+                {question.num1}
+              </motion.div>
+            </div>
 
             <motion.span
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="text-purple-700"
+              className="text-purple-500"
             >
               {getOperationSymbol()}
             </motion.span>
 
-            <motion.span
-              initial={{ scale: 0.5, opacity: 0, rotateY: 180 }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                rotateY: 0,
-                y: [0, -5, 0, -5, 0],
-              }}
-              transition={{
-                delay: 0.3,
-                type: "spring",
-                y: {
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatDelay: 2,
-                  duration: 1,
-                },
-              }}
-              className="bg-gradient-to-r from-pink-400 to-purple-400 h-24 w-24 flex items-center justify-center rounded-2xl shadow-md text-white border-4 border-pink-200"
-            >
-              {question.num2}
-            </motion.span>
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-b from-indigo-400 to-purple-500 rounded-full shadow-md -z-10" />
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring" }}
+                className="text-white px-8 py-12"
+              >
+                {question.num2}
+              </motion.div>
+            </div>
 
             <motion.span
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.4, type: "spring" }}
-              className="text-purple-700"
+              className="text-indigo-700"
             >
               =
             </motion.span>
 
-            <motion.span
-              initial={{ scale: 0.5, opacity: 0, rotateY: 180 }}
-              animate={{
-                scale: [1, answered && isCorrect ? 1.2 : 1],
-                opacity: 1,
-                rotateY: 0,
-                rotateZ: answered && isCorrect ? [0, -10, 10, -10, 0] : 0,
-              }}
-              transition={{
-                delay: 0.5,
-                type: "spring",
-                rotateZ: { repeat: 0, duration: 0.5 },
-              }}
-              className={`h-24 w-24 flex items-center justify-center rounded-2xl shadow-md border-4 ${
-                answered
-                  ? isCorrect
-                    ? "bg-green-100 text-green-600 border-green-300"
-                    : "bg-red-100 text-red-600 border-red-300"
-                  : "bg-white text-pink-500 border-pink-200"
-              }`}
-            >
-              {answered ? question.answer : "?"}
-            </motion.span>
-          </div>
-
-          {/* Character reactions */}
-          <AnimatePresence>
-            {answered && (
+            <div className="relative">
+              <div
+                className={`absolute inset-0 rounded-full shadow-md -z-10 ${
+                  answered ? (isCorrect ? "bg-green-100" : "bg-red-100") : "bg-white"
+                }`}
+              />
               <motion.div
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 50, opacity: 0 }}
-                className="absolute -bottom-16 left-1/2 transform -translate-x-1/2"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{
+                  scale: [1, answered && !isCorrect ? 1.2 : 1],
+                  opacity: 1,
+                }}
+                transition={{ delay: 0.5, type: "spring" }}
+                className={`px-8 py-12 ${answered ? (isCorrect ? "text-green-600" : "text-red-600") : "text-pink-500"}`}
               >
-                {isCorrect ? (
-                  <motion.div
-                    className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl"
-                    animate={{
-                      y: [0, -20, 0],
-                      rotate: [0, 10, -10, 0],
-                    }}
-                    transition={{ duration: 1 }}
+                {answered ? (
+                  <motion.span
+                    animate={
+                      !isCorrect
+                        ? {
+                            scale: [1, 1.2, 1],
+                            color: ["#ef4444", "#ffffff", "#ef4444"],
+                          }
+                        : {}
+                    }
+                    transition={{ repeat: 2, duration: 0.5 }}
                   >
-                    😄
-                  </motion.div>
+                    {question.answer}
+                  </motion.span>
                 ) : (
-                  <motion.div
-                    className="w-20 h-20 bg-blue-400 rounded-full flex items-center justify-center text-4xl"
-                    animate={{
-                      rotate: [0, -5, 5, -5, 0],
-                    }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    🤔
-                  </motion.div>
+                  "?"
                 )}
               </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Answer options */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Enhanced Answer options */}
+        <div className="grid grid-cols-2 gap-5 mb-8">
           {options.map((option, index) => (
             <motion.div
               key={index}
@@ -494,12 +491,14 @@ export function GameScreen({
               whileTap={{ scale: answered ? 1 : 0.95 }}
             >
               <Button
-                className={`w-full h-20 text-3xl font-bold rounded-xl ${
+                className={`w-full h-20 text-6xl font-bold rounded-2xl shadow-md ${
                   answered && option === question.answer
-                    ? "bg-green-500 hover:bg-green-600 border-4 border-green-300"
+                    ? "bg-green-500 hover:bg-green-600"
                     : answered && option === selectedOption && option !== question.answer
-                      ? "bg-red-500 hover:bg-red-600 border-4 border-red-300"
-                      : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-4 border-purple-300"
+                      ? "bg-red-500 hover:bg-red-600"
+                      : index % 2 === 0
+                        ? "bg-gradient-to-r from-pink-400 to-red-400 hover:from-pink-500 hover:to-red-500"
+                        : "bg-gradient-to-r from-indigo-400 to-purple-400 hover:from-indigo-500 hover:to-purple-500"
                 }`}
                 onClick={() => handleOptionSelect(option)}
                 disabled={answered}
@@ -510,48 +509,62 @@ export function GameScreen({
           ))}
         </div>
 
-        {/* Feedback message */}
-        {answered && (
+        {/* Enhanced Feedback message */}
+        {answered && !isCorrect && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring" }}
-            className={`p-4 rounded-xl text-center text-white font-bold text-xl ${
-              isCorrect ? "bg-green-500" : "bg-red-500"
-            }`}
+            className="p-4 rounded-2xl text-center text-white font-bold text-xl bg-red-500"
           >
-            {isCorrect ? (
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 0.5 }}
-                className="flex items-center justify-center gap-2"
+            <motion.div className="flex items-center justify-center gap-2">
+              {timeLeft === 0 ? (
+                <>
+                  <span>Time's up!</span>
+                </>
+              ) : (
+                <>
+                  <span>Try again!</span>
+                </>
+              )}
+            </motion.div>
+
+            <motion.div
+              className="mt-2 text-lg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              The correct answer is{" "}
+              <motion.span
+                className="font-bold text-2xl"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  textShadow: ["0px 0px 0px white", "0px 0px 8px white", "0px 0px 0px white"],
+                }}
+                transition={{ repeat: 2, duration: 0.7 }}
               >
-                <span>Great job! That's correct! 🎉</span>
-                <motion.span animate={{ rotate: [0, 10, -10, 10, 0] }} transition={{ repeat: 2, duration: 0.5 }}>
-                  🌟
-                </motion.span>
-              </motion.div>
-            ) : (
-              <motion.div className="flex items-center justify-center gap-2">
-                {timeLeft === 0 ? (
-                  <>
-                    <span>Time's up! ⏱️</span>
-                    <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: 2, duration: 0.3 }}>
-                      ⏰
-                    </motion.span>
-                  </>
-                ) : (
-                  <>
-                    <span>Not quite right. Try again! 🤔</span>
-                    <motion.span animate={{ y: [0, -5, 0] }} transition={{ repeat: 2, duration: 0.5 }}>
-                      📚
-                    </motion.span>
-                  </>
-                )}
-              </motion.div>
-            )}
-            {!isCorrect && <div className="mt-2 text-lg">The correct answer is {question.answer}</div>}
+                {question.answer}
+              </motion.span>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {answered && isCorrect && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring" }}
+            className="p-4 rounded-2xl text-center text-white font-bold text-xl bg-green-500"
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center justify-center gap-3"
+            >
+              <span>Great job! That's correct!</span>
+            </motion.div>
           </motion.div>
         )}
       </Card>

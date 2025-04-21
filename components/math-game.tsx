@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Minus, X, Divide, ArrowRight, Volume2, VolumeX, Home, Sparkles } from "lucide-react"
+import { Plus, Minus, X, Divide, ArrowRight, Volume2, VolumeX, Home } from "lucide-react"
 import confetti from "canvas-confetti"
 
 import { Button } from "@/components/ui/button"
@@ -207,13 +207,6 @@ export function MathGame() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 Math Adventure
               </h1>
-              <motion.div
-                className="ml-3"
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 10, ease: "linear" }}
-              >
-                <Sparkles className="h-6 w-6 text-yellow-400" />
-              </motion.div>
             </div>
             <p className="text-lg text-purple-500">Learn math the fun way!</p>
 
@@ -248,20 +241,6 @@ export function MathGame() {
             transition={{ duration: 0.3 }}
           >
             <Card className="p-6 shadow-xl bg-white rounded-3xl border-8 border-purple-300">
-              <motion.div
-                className="absolute -top-6 -right-6 w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl shadow-lg"
-                animate={{
-                  rotate: [0, 10, -10, 10, 0],
-                  y: [0, -5, 0],
-                }}
-                transition={{
-                  rotate: { repeat: Number.POSITIVE_INFINITY, duration: 3 },
-                  y: { repeat: Number.POSITIVE_INFINITY, duration: 2, delay: 1 },
-                }}
-              >
-                🧮
-              </motion.div>
-
               <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 Game Setup
               </h2>
@@ -398,35 +377,6 @@ export function MathGame() {
                 >
                   Start Learning <ArrowRight className="ml-3 h-6 w-6" />
                 </Button>
-              </motion.div>
-
-              {/* Floating characters */}
-              <motion.div
-                className="absolute -bottom-10 -left-10 w-24 h-24 bg-blue-400 rounded-full flex items-center justify-center text-4xl shadow-lg"
-                animate={{
-                  y: [0, -10, 0],
-                  rotate: [0, 5, -5, 0],
-                }}
-                transition={{
-                  y: { repeat: Number.POSITIVE_INFINITY, duration: 2 },
-                  rotate: { repeat: Number.POSITIVE_INFINITY, duration: 3, delay: 0.5 },
-                }}
-              >
-                🦄
-              </motion.div>
-
-              <motion.div
-                className="absolute -bottom-5 -right-5 w-16 h-16 bg-green-400 rounded-full flex items-center justify-center text-3xl shadow-lg"
-                animate={{
-                  y: [0, -8, 0],
-                  x: [0, 5, 0],
-                }}
-                transition={{
-                  y: { repeat: Number.POSITIVE_INFINITY, duration: 1.5, delay: 0.2 },
-                  x: { repeat: Number.POSITIVE_INFINITY, duration: 2, delay: 0.7 },
-                }}
-              >
-                🐢
               </motion.div>
             </Card>
           </motion.div>

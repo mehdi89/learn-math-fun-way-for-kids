@@ -37,6 +37,7 @@ export function GameScreen({
   const [timerActive, setTimerActive] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait")
 
   // Sound references
   const correctSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -44,6 +45,20 @@ export function GameScreen({
   const clickSoundRef = useRef<HTMLAudioElement | null>(null)
   const tickingSoundRef = useRef<HTMLAudioElement | null>(null)
   const timeUpSoundRef = useRef<HTMLAudioElement | null>(null)
+
+  // Check orientation for iPad-friendly layout
+  useEffect(() => {
+    const checkOrientation = () => {
+      setOrientation(window.innerWidth > window.innerHeight ? "landscape" : "portrait")
+    }
+
+    checkOrientation()
+    window.addEventListener("resize", checkOrientation)
+
+    return () => {
+      window.removeEventListener("resize", checkOrientation)
+    }
+  }, [])
 
   useEffect(() => {
     // Initialize audio elements
@@ -278,85 +293,35 @@ export function GameScreen({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
-      className="relative"
+      className="relative w-full h-full"
     >
-      {/* Enhanced animated background elements */}
-      <div className="absolute -z-10 inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-gradient-to-r from-indigo-300 to-pink-300 opacity-70"
-            style={{
-              width: Math.random() * 120 + 50,
-              height: Math.random() * 120 + 50,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              x: [0, Math.random() * 100 - 50, 0],
-              y: [0, Math.random() * 100 - 50, 0],
-              rotate: [0, Math.random() * 360, 0],
-              scale: [1, Math.random() * 0.3 + 0.8, 1],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "linear",
-            }}
-          />
-        ))}
-      </div>
+      <Card className="p-6 md:p-8 shadow-xl bg-white/90 backdrop-blur-sm rounded-3xl border-4 md:border-8 border-indigo-300 max-w-4xl mx-auto">
+        <div className="text-center mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-purple-600">Learn math the fun way!</h1>
+        </div>
 
-      <Card className="p-8 shadow-xl bg-white/90 backdrop-blur-sm rounded-3xl border-8 border-indigo-300">
-        <div className="flex justify-between items-center mb-6">
-          <motion.div
-            className="text-indigo-600 font-bold text-xl px-4 py-2 bg-indigo-100 rounded-full"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            animate={{ y: [0, -3, 0] }}
-            transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
-          >
-            Round {currentRound}/{totalRounds}
-          </motion.div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={toggleSound}>
-              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-            </Button>
-            <motion.div
-              className="text-pink-600 font-bold text-xl px-4 py-2 bg-pink-100 rounded-full"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              animate={{
-                scale: score > 0 && score % 3 === 0 ? [1, 1.1, 1] : 1,
-                rotate: score > 0 && score % 3 === 0 ? [0, 5, -5, 0] : 0,
-              }}
-              transition={{
-                scale: { repeat: 3, duration: 0.3 },
-                rotate: { repeat: 3, duration: 0.5 },
-              }}
-            >
-              Score: {score}
-            </motion.div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="bg-indigo-100 px-4 py-2 rounded-full">
+            <span className="text-lg md:text-xl font-bold text-indigo-600">
+              Round {currentRound}/{totalRounds}
+            </span>
+          </div>
+
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={toggleSound}>
+            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+          </Button>
+
+          <div className="bg-pink-100 px-4 py-2 rounded-full">
+            <span className="text-lg md:text-xl font-bold text-pink-600">Score: {score}</span>
           </div>
         </div>
 
         <div className="mb-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-lg font-medium text-indigo-600">Progress</span>
-            <motion.div
-              className="flex items-center gap-1 text-lg font-bold text-pink-600 px-3 py-1 bg-pink-50 rounded-full"
-              initial={{ scale: 1 }}
-              animate={{
-                scale: timeLeft <= timerDuration * 0.2 ? [1, 1.2, 1] : 1,
-                x: timeLeft <= timerDuration * 0.2 ? [0, 5, -5, 0] : 0,
-              }}
-              transition={{
-                repeat: timeLeft <= timerDuration * 0.2 ? Number.POSITIVE_INFINITY : 0,
-                duration: 0.5,
-              }}
-            >
-              <span>{timeLeft}s</span>
-            </motion.div>
+            <div className="bg-pink-100 px-3 py-1 rounded-full">
+              <span className="text-lg font-bold text-pink-600">{timeLeft}s</span>
+            </div>
           </div>
           <div className="relative pt-1">
             <div className="overflow-hidden h-8 text-xs flex rounded-full bg-indigo-100">
@@ -368,13 +333,7 @@ export function GameScreen({
                 transition={{ duration: 0.5 }}
               >
                 {currentRound > totalRounds / 3 && (
-                  <motion.span
-                    className="text-white font-bold"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
-                  >
-                    {Math.round((currentRound / totalRounds) * 100)}%
-                  </motion.span>
+                  <span className="text-white font-bold">{Math.round((currentRound / totalRounds) * 100)}%</span>
                 )}
               </motion.div>
             </div>
@@ -393,20 +352,20 @@ export function GameScreen({
 
         {/* Enhanced Question display */}
         <motion.div
-          className="bg-white p-8 rounded-3xl mb-8 text-center relative shadow-md"
+          className="bg-white p-6 md:p-8 rounded-3xl mb-6 md:mb-8 text-center relative shadow-md"
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.3 }}
           layout
         >
-          <div className="flex items-center justify-center text-7xl font-bold gap-8">
+          <div className="flex items-center justify-center text-5xl md:text-7xl font-bold gap-4 md:gap-8">
             <div className="relative">
               <div className="absolute inset-0 bg-white rounded-full shadow-md -z-10" />
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.1, type: "spring" }}
-                className="text-indigo-700 px-8 py-12"
+                className="text-indigo-700 px-6 md:px-8 py-8 md:py-12"
               >
                 {question.num1}
               </motion.div>
@@ -427,7 +386,7 @@ export function GameScreen({
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring" }}
-                className="text-white px-8 py-12"
+                className="text-white px-6 md:px-8 py-8 md:py-12"
               >
                 {question.num2}
               </motion.div>
@@ -455,7 +414,7 @@ export function GameScreen({
                   opacity: 1,
                 }}
                 transition={{ delay: 0.5, type: "spring" }}
-                className={`px-8 py-12 ${answered ? (isCorrect ? "text-green-600" : "text-red-600") : "text-pink-500"}`}
+                className={`px-6 md:px-8 py-8 md:py-12 ${answered ? (isCorrect ? "text-green-600" : "text-red-600") : "text-pink-500"}`}
               >
                 {answered ? (
                   <motion.span
@@ -479,8 +438,8 @@ export function GameScreen({
           </div>
         </motion.div>
 
-        {/* Enhanced Answer options */}
-        <div className="grid grid-cols-2 gap-5 mb-8">
+        {/* Enhanced Answer options - 2x2 grid for portrait, 4x1 for landscape on tablets */}
+        <div className={`grid ${orientation === "landscape" ? "grid-cols-4" : "grid-cols-2"} gap-4 mb-6`}>
           {options.map((option, index) => (
             <motion.div
               key={index}
@@ -491,7 +450,7 @@ export function GameScreen({
               whileTap={{ scale: answered ? 1 : 0.95 }}
             >
               <Button
-                className={`w-full h-20 text-6xl font-bold rounded-2xl shadow-md ${
+                className={`w-full h-16 md:h-20 text-4xl md:text-6xl font-bold rounded-2xl shadow-md ${
                   answered && option === question.answer
                     ? "bg-green-500 hover:bg-green-600"
                     : answered && option === selectedOption && option !== question.answer

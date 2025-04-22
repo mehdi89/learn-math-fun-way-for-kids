@@ -11,6 +11,8 @@ import { Slider } from "@/components/ui/slider"
 import { GameScreen } from "@/components/game-screen"
 import { ScoreScreen } from "@/components/score-screen"
 import { SplashScreen } from "@/components/splash-screen"
+import { NicknameModal } from "./nickname-modal";
+import { Leaderboard } from "./leaderboard";
 
 type Operation = "addition" | "subtraction" | "multiplication" | "division"
 type Difficulty = "easy" | "medium" | "hard"
@@ -27,6 +29,10 @@ export function MathGame() {
   const [timerDuration, setTimerDuration] = useState<number>(10)
   const [showTutorial, setShowTutorial] = useState(false)
   const [difficulty, setDifficulty] = useState<Difficulty>("medium")
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [savedScoreId, setSavedScoreId] = useState<number | null>(null);
 
   // Sound references
   const buttonSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -60,12 +66,22 @@ export function MathGame() {
     const savedRounds = localStorage.getItem("mathGameRounds")
     const savedTimerDuration = localStorage.getItem("mathGameTimerDuration")
     const savedDifficulty = localStorage.getItem("mathGameDifficulty") as Difficulty | null
+    const savedNickname = localStorage.getItem("mathGameNickname");
+    const savedScoreId = localStorage.getItem("mathGameScoreId");
 
     if (savedOperation) setOperation(savedOperation)
     if (savedNumber) setNumber(Number.parseInt(savedNumber))
     if (savedRounds) setRounds(Number.parseInt(savedRounds))
     if (savedTimerDuration) setTimerDuration(Number.parseInt(savedTimerDuration))
     if (savedDifficulty) setDifficulty(savedDifficulty)
+    if (!savedNickname) {
+      setShowNicknameModal(true);
+    } else {
+      setNickname(savedNickname);
+    }
+    if (savedScoreId) {
+      setSavedScoreId(Number.parseInt(savedScoreId));
+    }
   }, [])
 
   const playSound = (type: "button" | "start") => {
@@ -241,6 +257,12 @@ export function MathGame() {
     setGameState("setup")
   }
 
+  const handleNicknameSubmit = (name: string) => {
+    localStorage.setItem("mathGameNickname", name);
+    setNickname(name);
+    setShowNicknameModal(false);
+  };
+
   return (
     <div className="container mx-auto max-w-md">
       <AnimatePresence mode="wait">
@@ -255,7 +277,7 @@ export function MathGame() {
               <motion.div
                 className="mr-3 text-4xl"
                 animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 3 }}
+                transition={{ type: "keyframes", repeat: Number.POSITIVE_INFINITY, duration: 3 }}
               >
                 🧮
               </motion.div>
@@ -298,6 +320,12 @@ export function MathGame() {
               <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 Game Setup
               </h2>
+              <Button
+                onClick={() => setShowLeaderboard(true)}
+                className="w-full h-12 text-lg font-bold bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl border-4 border-indigo-400 shadow-lg mb-4"
+              >
+                View Leaderboard
+              </Button>
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
                   <motion.span
@@ -314,11 +342,10 @@ export function MathGame() {
                     <motion.div key={op} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Button
                         variant={operation === op ? "default" : "outline"}
-                        className={`h-20 text-lg w-full ${
-                          operation === op
+                        className={`h-20 text-lg w-full ${operation === op
                             ? "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-4 border-indigo-300"
                             : "border-4 border-purple-200"
-                        }`}
+                          }`}
                         onClick={() => {
                           setOperation(op)
                           playSound("button")
@@ -350,11 +377,10 @@ export function MathGame() {
                     <motion.div key={num} whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
                       <Button
                         variant={number === num ? "default" : "outline"}
-                        className={`h-16 w-16 text-2xl font-bold ${
-                          number === num
+                        className={`h-16 w-16 text-2xl font-bold ${number === num
                             ? "bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 border-4 border-pink-300"
                             : "border-4 border-pink-200"
-                        }`}
+                          }`}
                         onClick={() => {
                           setNumber(num)
                           playSound("button")
@@ -385,11 +411,10 @@ export function MathGame() {
                       <motion.div key={diff} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button
                           variant={difficulty === diff ? "default" : "outline"}
-                          className={`h-24 text-lg w-full ${
-                            difficulty === diff
+                          className={`h-24 text-lg w-full ${difficulty === diff
                               ? `bg-gradient-to-r ${settings.color} ${settings.hoverColor} border-4 ${settings.borderColor}`
                               : "border-4 border-purple-200"
-                          }`}
+                            }`}
                           onClick={() => {
                             setDifficulty(diff)
                             playSound("button")
@@ -504,6 +529,47 @@ export function MathGame() {
           />
         )}
       </AnimatePresence>
+
+      {showNicknameModal && (
+        <NicknameModal 
+          onSubmit={handleNicknameSubmit} 
+          onCancel={() => setShowNicknameModal(false)} 
+        />
+      )}
+
+      {showLeaderboard && gameState === "setup" && (
+        <Leaderboard
+          operation={operation}
+          numberUsed={number}
+          rounds={rounds}
+          timerDuration={timerDuration}
+          difficulty={difficulty}
+          onClose={() => setShowLeaderboard(false)}
+          showAllEntries={true}
+        />
+      )}
+
+      {showLeaderboard && gameState === "score" && (
+        <Leaderboard
+          operation={operation}
+          numberUsed={number}
+          rounds={rounds}
+          timerDuration={timerDuration}
+          difficulty={difficulty}
+          onClose={() => setShowLeaderboard(false)}
+          userScoreId={savedScoreId ?? undefined}
+        />
+      )}
+
+      {showTutorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <Card className="w-full max-w-md p-6 bg-white rounded-xl">
+            <h2 className="text-2xl font-bold mb-4">How to Play</h2>
+            <p>Instructions would go here...</p>
+            <Button onClick={() => setShowTutorial(false)} className="mt-6">Close</Button>
+          </Card>
+        </div>
+      )}
 
       {/* Hidden audio elements */}
       <audio src="/sounds/click.mp3" ref={buttonSoundRef} />

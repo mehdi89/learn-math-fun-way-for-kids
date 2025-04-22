@@ -24,6 +24,11 @@ export type LeaderboardEntry = {
   score: number
   percentage: number
   created_at: string
+  operation?: string
+  number_used?: number
+  rounds?: number
+  timer_duration?: number
+  difficulty?: string
   rank?: number
 }
 
@@ -86,7 +91,7 @@ export async function getLeaderboard(
   timerDuration: number,
   difficulty: string,
   limit = 10,
-) {
+): Promise<LeaderboardEntry[]> {
   try {
     const leaderboard = await sql`
       SELECT id, nickname, score, percentage, created_at
@@ -100,11 +105,14 @@ export async function getLeaderboard(
       LIMIT ${limit}
     `
 
-    // Add rank to each entry
-    return leaderboard.map((entry, index) => ({
-      ...entry,
-      rank: index + 1,
+    // Add rank to each entry and ensure type safety
+    return leaderboard.map((entry, index): LeaderboardEntry => ({
+      id: entry.id,
+      nickname: entry.nickname,
+      score: entry.score,
+      percentage: entry.percentage,
       created_at: new Date(entry.created_at).toLocaleDateString(),
+      rank: index + 1
     }))
   } catch (error) {
     console.error("Error fetching leaderboard:", error)
@@ -112,15 +120,50 @@ export async function getLeaderboard(
   }
 }
 
+// Get all leaderboard entries across all configurations
+export async function getAllLeaderboardEntries(limit = 10): Promise<LeaderboardEntry[]> {
+  try {
+    const leaderboard = await sql`
+      SELECT id, nickname, score, percentage, created_at, 
+             operation, number_used, rounds, timer_duration, difficulty
+      FROM scores
+      ORDER BY score DESC, percentage DESC
+      LIMIT ${limit}
+    `
+
+    // Add rank to each entry and ensure type safety
+    return leaderboard.map((entry, index): LeaderboardEntry => ({
+      id: entry.id,
+      nickname: entry.nickname,
+      score: entry.score,
+      percentage: entry.percentage,
+      created_at: new Date(entry.created_at).toLocaleDateString(),
+      operation: entry.operation,
+      number_used: entry.number_used,
+      rounds: entry.rounds,
+      timer_duration: entry.timer_duration,
+      difficulty: entry.difficulty,
+      rank: index + 1
+    }))
+  } catch (error) {
+    console.error("Error fetching all leaderboard entries:", error)
+    return []
+  }
+}
+
 // Get user's rank on the leaderboard
 export async function getUserRank(scoreId: number) {
   try {
+    console.log("Getting rank for score ID:", scoreId);
+    
     // First get the score details
     const scoreDetails = await sql`
       SELECT operation, number_used, rounds, timer_duration, difficulty, score
       FROM scores
       WHERE id = ${scoreId}
     `
+    
+    console.log("Score details:", scoreDetails);
 
     if (scoreDetails.length === 0) {
       return { rank: null, error: "Score not found" }
@@ -139,9 +182,22 @@ export async function getUserRank(scoreId: number) {
       AND difficulty = ${score.difficulty}
       AND (score > ${score.score} OR (score = ${score.score} AND id < ${scoreId}))
     `
-
-    // Rank is the count of higher scores + 1
-    return { rank: higherScores[0].rank + 1, total: await getTotalScores(score) }
+    
+    console.log("Higher scores query result:", higherScores);
+    console.log("Raw rank value:", higherScores[0].rank);
+    console.log("Rank value type:", typeof higherScores[0].rank);
+    
+    // Convert rank to number explicitly and add 1
+    const rankNumber = Number(higherScores[0].rank) + 1;
+    console.log("Final rank number:", rankNumber);
+    
+    const totalCount = await getTotalScores(score);
+    
+    // Return values as numbers
+    return { 
+      rank: rankNumber, 
+      total: totalCount 
+    }
   } catch (error) {
     console.error("Error getting user rank:", error)
     return { rank: null, error: "Failed to get rank" }
@@ -160,7 +216,16 @@ async function getTotalScores(score: any) {
       AND timer_duration = ${score.timer_duration}
       AND difficulty = ${score.difficulty}
     `
-    return result[0].total
+    
+    console.log("Total scores query result:", result);
+    console.log("Raw total value:", result[0].total);
+    console.log("Total value type:", typeof result[0].total);
+    
+    // Convert total to number explicitly
+    const totalNumber = Number(result[0].total);
+    console.log("Final total number:", totalNumber);
+    
+    return totalNumber;
   } catch (error) {
     console.error("Error getting total scores:", error)
     return 0

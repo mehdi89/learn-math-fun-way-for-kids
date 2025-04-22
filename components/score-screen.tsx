@@ -42,11 +42,41 @@ export function ScoreScreen({
   const [previousBest, setPreviousBest] = useState(0)
   const [showHighScoreAlert, setShowHighScoreAlert] = useState(false)
   const [scoreSubmitted, setScoreSubmitted] = useState(false)
+  const [nickname, setNickname] = useState<string | null>(null)
 
   // Sound references
   const victorySoundRef = useRef<HTMLAudioElement | null>(null)
   const clickSoundRef = useRef<HTMLAudioElement | null>(null)
   const starSoundRef = useRef<HTMLAudioElement | null>(null)
+
+  // Precompute confetti and bubble randoms
+  const confettiData = useRef(
+    Array.from({ length: 40 }, () => ({
+      width: Math.random() * 20 + 10,
+      height: Math.random() * 20 + 10,
+      left: Math.random() * 100,
+      color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+      rotate: Math.random() * 360,
+      duration: Math.random() * 3 + 2,
+      delay: Math.random() * 3,
+      repeatDelay: Math.random() * 5,
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+    }))
+  ).current
+  const bubbleData = useRef(
+    Array.from({ length: 30 }, () => ({
+      width: Math.random() * 80 + 40,
+      height: Math.random() * 80 + 40,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      x: Math.random() * 100 - 50,
+      y: Math.random() * 100 - 50,
+      rotate: Math.random() * 360,
+      scale: Math.random() * 0.3 + 0.8,
+      duration: Math.random() * 10 + 10,
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+    }))
+  ).current
 
   useEffect(() => {
     // Initialize audio elements
@@ -64,6 +94,12 @@ export function ScoreScreen({
       setShowConfetti(true)
     }, 500)
 
+    // Check if the user has a nickname saved
+    const savedNickname = localStorage.getItem("mathGameNickname");
+    if (savedNickname) {
+      setNickname(savedNickname);
+    }
+
     // Check if this is a high score
     checkIfHighScore()
 
@@ -79,8 +115,10 @@ export function ScoreScreen({
   }, [])
 
   const checkIfHighScore = async () => {
+    const savedNickname = localStorage.getItem("mathGameNickname");
+    
     const scoreData: ScoreData = {
-      nickname: "",
+      nickname: savedNickname || "",
       operation,
       numberUsed,
       rounds: totalRounds,
@@ -95,18 +133,33 @@ export function ScoreScreen({
     if (result.isHighScore) {
       setIsHighScore(true)
       setPreviousBest(result.previousBest)
-      // Show nickname modal after a short delay
-      setTimeout(() => {
-        setShowNicknameModal(true)
-      }, 1500)
+      
+      // If we already have the nickname, save the score immediately
+      if (savedNickname) {
+        await handleSaveScore(savedNickname);
+        // Show high score alert
+        setTimeout(() => {
+          setShowHighScoreAlert(true);
+        }, 1500);
+      } else {
+        // Only show nickname modal if we don't have a nickname
+        setTimeout(() => {
+          setShowNicknameModal(true);
+        }, 1500);
+      }
+    } else {
+      // Not a high score, but if we have a nickname, auto-save the score
+      if (savedNickname && !scoreSubmitted) {
+        await handleSaveScore(savedNickname);
+      }
     }
   }
 
-  const handleSaveScore = async (nickname: string) => {
+  const handleSaveScore = async (name: string) => {
     setShowNicknameModal(false)
 
     const scoreData: ScoreData = {
-      nickname,
+      nickname: name,
       operation,
       numberUsed,
       rounds: totalRounds,
@@ -116,20 +169,36 @@ export function ScoreScreen({
       percentage,
     }
 
+    console.log("Saving score data:", scoreData);
     const result = await saveScore(scoreData)
 
     if (result.success) {
       setSavedScoreId(result.id)
       setScoreSubmitted(true)
+      
+      // Save the scoreId to localStorage for persistence
+      localStorage.setItem("mathGameScoreId", result.id.toString())
 
       // Get user's rank
       const rankResult = await getUserRank(result.id)
+      console.log("Raw rank result:", rankResult);
+      
       if (rankResult.rank) {
-        setUserRank(rankResult.rank)
+        // Log the data type and value of rankResult.rank
+        console.log("Rank type:", typeof rankResult.rank, "Rank value:", rankResult.rank);
+        
+        // Ensure rank is treated as a number
+        const numericRank = parseInt(rankResult.rank.toString(), 10);
+        console.log("Converted rank:", numericRank);
+        
+        setUserRank(numericRank);
         setTotalScores(rankResult.total)
+        
+        // Log the final userRank state
+        console.log("Final userRank set to:", numericRank);
       }
 
-      // Show high score alert if it's a high score
+      // Show high score alert immediately if it's a high score
       if (isHighScore) {
         setShowHighScoreAlert(true)
       }
@@ -194,51 +263,50 @@ export function ScoreScreen({
     >
       <div className="absolute -z-10 inset-0 overflow-hidden">
         {showConfetti &&
-          [...Array(40)].map((_, i) => (
+          confettiData.map((c, i) => (
             <motion.div
-              key={i}
+              key={c.id}
               className="absolute rounded-full"
               style={{
-                width: Math.random() * 20 + 10,
-                height: Math.random() * 20 + 10,
-                left: `${Math.random() * 100}%`,
+                width: c.width,
+                height: c.height,
+                left: `${c.left}%`,
                 top: `-10%`,
-                backgroundColor: `hsl(${Math.random() * 360}, 80%, 60%)`,
+                backgroundColor: c.color,
               }}
               initial={{ y: -100, opacity: 0 }}
               animate={{
                 y: window.innerHeight * 1.5,
                 opacity: [0, 1, 1, 0],
-                rotate: Math.random() * 360,
+                rotate: c.rotate,
               }}
               transition={{
-                duration: Math.random() * 3 + 2,
-                delay: Math.random() * 3,
+                duration: c.duration,
+                delay: c.delay,
                 repeat: Number.POSITIVE_INFINITY,
-                repeatDelay: Math.random() * 5,
+                repeatDelay: c.repeatDelay,
               }}
             />
           ))}
 
-        {/* Animated background bubbles */}
-        {[...Array(30)].map((_, i) => (
+        {[...bubbleData].map((b, i) => (
           <motion.div
-            key={`bubble-${i}`}
+            key={b.id}
             className="absolute rounded-full bg-gradient-to-r from-yellow-300 to-pink-300 opacity-70"
             style={{
-              width: Math.random() * 80 + 40,
-              height: Math.random() * 80 + 40,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              width: b.width,
+              height: b.height,
+              left: `${b.left}%`,
+              top: `${b.top}%`,
             }}
             animate={{
-              x: [0, Math.random() * 100 - 50, 0],
-              y: [0, Math.random() * 100 - 50, 0],
-              rotate: [0, Math.random() * 360, 0],
-              scale: [1, Math.random() * 0.3 + 0.8, 1],
+              x: [0, b.x, 0],
+              y: [0, b.y, 0],
+              rotate: [0, b.rotate, 0],
+              scale: [1, b.scale, 1],
             }}
             transition={{
-              duration: Math.random() * 10 + 10,
+              duration: b.duration,
               repeat: Number.POSITIVE_INFINITY,
               ease: "linear",
             }}
@@ -247,24 +315,6 @@ export function ScoreScreen({
       </div>
 
       <Card className="p-10 shadow-xl bg-white/90 backdrop-blur-sm rounded-3xl border-8 border-indigo-300">
-        <div className="absolute top-6 right-6 flex gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={toggleSound}>
-            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full"
-            onClick={() => {
-              playSound("click")
-              setShowLeaderboard(true)
-            }}
-          >
-            <BarChart className="h-5 w-5" />
-          </Button>
-        </div>
-
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{
@@ -340,10 +390,22 @@ export function ScoreScreen({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 }}
               className="mb-6 p-4 bg-indigo-50 rounded-xl border-2 border-indigo-100"
+              onAnimationStart={() => {
+                console.log("Rendering rank display with userRank:", userRank, "type:", typeof userRank);
+              }}
             >
               <p className="text-lg font-medium text-indigo-700">
-                Your Rank: <span className="font-bold">{userRank}</span> of {totalScores}
+                Your Rank: <span className="font-bold">{parseInt(String(userRank), 10)}</span> of {totalScores}
               </p>
+
+              {/* add a button to see the leaderboard */}
+              <Button
+                variant="outline"
+                onClick={() => setShowLeaderboard(true)}
+                className="mt-4 bg-indigo-500 text-white hover:bg-indigo-600"
+              >
+                View Leaderboard
+              </Button>
             </motion.div>
           )}
 
@@ -396,7 +458,7 @@ export function ScoreScreen({
             </motion.div>
           </motion.div>
 
-          {!scoreSubmitted && !isHighScore && (
+          {!scoreSubmitted && !isHighScore && !nickname && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -451,7 +513,7 @@ export function ScoreScreen({
             </motion.div>
           </div>
 
-          <motion.div
+          {/* <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 2.2 }}
@@ -461,7 +523,7 @@ export function ScoreScreen({
             <Button variant="ghost" onClick={() => playSound("click")} className="w-full h-12 text-lg text-indigo-600">
               <Download className="mr-2 h-5 w-5" /> Save Certificate
             </Button>
-          </motion.div>
+          </motion.div> */}
         </motion.div>
 
         {/* Character */}
@@ -535,6 +597,7 @@ export function ScoreScreen({
             difficulty={difficulty}
             onClose={() => setShowLeaderboard(false)}
             userScoreId={savedScoreId || undefined}
+            showAllEntries={false}
           />
         )}
 

@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Learn math fun way',
+  description: 'Learn Addition, Subsctraction, Multiplication and Division',
   generator: 'v0.dev',
 }
 

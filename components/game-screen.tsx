@@ -1,13 +1,25 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import { Plus, Minus, X, Divide, Volume2, VolumeX } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Plus, Minus, X, Divide, Volume2, VolumeX, Pause, Play, Home, Settings } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
 type Operation = "addition" | "subtraction" | "multiplication" | "division"
+type Difficulty = "easy" | "medium" | "hard"
+
+interface DifficultySettings {
+  timerMultiplier: number
+  minNumber: number
+  maxNumber: number
+  icon: string
+  color: string
+  hoverColor: string
+  borderColor: string
+  description: string
+}
 
 interface GameScreenProps {
   operation: Operation
@@ -17,6 +29,9 @@ interface GameScreenProps {
   onAnswer: (correct: boolean) => void
   score: number
   timerDuration?: number
+  onExit?: () => void
+  difficulty?: Difficulty
+  difficultySettings?: DifficultySettings
 }
 
 export function GameScreen({
@@ -27,6 +42,9 @@ export function GameScreen({
   onAnswer,
   score,
   timerDuration = 10,
+  onExit,
+  difficulty = "medium",
+  difficultySettings,
 }: GameScreenProps) {
   const [question, setQuestion] = useState({ num1: 0, num2: 0, answer: 0 })
   const [options, setOptions] = useState<number[]>([])
@@ -37,6 +55,7 @@ export function GameScreen({
   const [timerActive, setTimerActive] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
 
   // Sound references
   const correctSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -70,10 +89,10 @@ export function GameScreen({
     generateQuestion()
     // Reset timer when timer duration changes
     setTimeLeft(timerDuration)
-  }, [currentRound, operation, number, timerDuration])
+  }, [currentRound, operation, number, timerDuration, difficulty, difficultySettings])
 
   useEffect(() => {
-    if (!timerActive || answered) {
+    if (!timerActive || answered || isPaused) {
       if (tickingSoundRef.current) {
         try {
           tickingSoundRef.current.pause()
@@ -129,7 +148,7 @@ export function GameScreen({
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [timerActive, answered, soundEnabled, hasUserInteracted, timerDuration])
+  }, [timerActive, answered, soundEnabled, hasUserInteracted, timerDuration, isPaused, difficulty])
 
   const playSound = (type: "correct" | "incorrect" | "click") => {
     if (!soundEnabled) return
@@ -158,31 +177,48 @@ export function GameScreen({
   }
 
   const generateQuestion = () => {
+    if (!difficultySettings) return
+
     let num1, num2, answer
+
+    // Get the min and max number range based on difficulty
+    const { minNumber, maxNumber } = difficultySettings
+
+    // Helper function to get a random number within the difficulty range
+    const getRandomNumber = () => {
+      return Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber
+    }
+
+    // For multiplication and division, we need to adjust the ranges to avoid too large numbers
+    const getMultiplicationFactor = () => {
+      if (difficulty === "easy") return Math.floor(Math.random() * 5) + 1
+      if (difficulty === "medium") return Math.floor(Math.random() * 10) + 1
+      return Math.floor(Math.random() * 15) + 1
+    }
 
     switch (operation) {
       case "addition":
         // For addition: num2 is the fixed number (e.g., 3 + 5)
         num2 = number
-        num1 = Math.floor(Math.random() * 10) + 1
+        num1 = getRandomNumber()
         answer = num1 + num2
         break
       case "subtraction":
-        // For subtraction: num2 is the fixed number, num1 is larger (e.g., 8 - 5 = 3)
+        // For subtraction: ensure the result is positive
         num2 = number
-        answer = Math.floor(Math.random() * 10) + 1
-        num1 = num2 + answer
+        num1 = getRandomNumber() + num2 // Ensure num1 > num2
+        answer = num1 - num2
         break
       case "multiplication":
-        // For multiplication: num2 is the fixed number (e.g., 3 × 5)
+        // For multiplication: adjust factors based on difficulty
         num2 = number
-        num1 = Math.floor(Math.random() * 5) + 1
+        num1 = getMultiplicationFactor()
         answer = num1 * num2
         break
       case "division":
-        // For division: num2 is the fixed number, num1 is the product (e.g., 15 ÷ 5 = 3)
+        // For division: ensure clean division
         num2 = number
-        answer = Math.floor(Math.random() * 5) + 1
+        answer = getMultiplicationFactor()
         num1 = num2 * answer
         break
     }
@@ -199,10 +235,37 @@ export function GameScreen({
   const generateOptions = (correctAnswer: number) => {
     const optionsArray = [correctAnswer]
 
+    // Determine how close wrong answers should be based on difficulty
+    const getOffsetRange = () => {
+      switch (difficulty) {
+        case "easy":
+          return { min: 1, max: 3 }
+        case "medium":
+          return { min: 2, max: 10 }
+        case "hard":
+          return { min: 5, max: 50 }
+        default:
+          return { min: 1, max: 3 }
+      }
+    }
+
+    const { min, max } = getOffsetRange()
+
+    // For larger numbers (hard difficulty), make the offset proportional to the answer
+    const getProportionalOffset = () => {
+      const baseOffset = Math.floor(Math.random() * (max - min + 1)) + min
+
+      // For hard difficulty with large numbers, make offset proportional
+      if (difficulty === "hard" && correctAnswer > 100) {
+        return baseOffset * Math.floor(correctAnswer / 100)
+      }
+
+      return baseOffset
+    }
+
     while (optionsArray.length < 4) {
-      // Generate a random offset between -3 and +3, but not 0
-      let offset = Math.floor(Math.random() * 7) - 3
-      if (offset === 0) offset = 1
+      // Generate a random offset
+      const offset = getProportionalOffset() * (Math.random() < 0.5 ? 1 : -1)
 
       const newOption = correctAnswer + offset
 
@@ -227,7 +290,7 @@ export function GameScreen({
   }
 
   const handleOptionSelect = (option: number) => {
-    if (answered) return
+    if (answered || isPaused) return
 
     setHasUserInteracted(true)
     playSound("click")
@@ -271,6 +334,18 @@ export function GameScreen({
     playSound("click")
   }
 
+  const togglePause = () => {
+    setIsPaused(!isPaused)
+    playSound("click")
+  }
+
+  const handleExit = () => {
+    if (onExit) {
+      playSound("click")
+      onExit()
+    }
+  }
+
   return (
     <motion.div
       key="game"
@@ -293,6 +368,9 @@ export function GameScreen({
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={toggleSound}>
               {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+            </Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={togglePause}>
+              {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
             </Button>
           </div>
 
@@ -338,34 +416,36 @@ export function GameScreen({
         {/* Equation display */}
         <div className="relative w-full mb-8">
           <div className="bg-white rounded-3xl shadow-md p-6 mx-auto max-w-3xl">
-            <div className="flex items-center justify-center gap-6 text-6xl font-bold">
+            <div className="flex items-center justify-center gap-4 md:gap-6">
               {/* First number */}
-              <div className="bg-white rounded-full shadow-md px-6 py-4 min-w-[80px] text-center text-indigo-700">
-                {question.num1}
+              <div className="flex items-center justify-center bg-white rounded-full shadow-md w-16 h-16 md:w-20 md:h-20">
+                <span className="text-4xl md:text-5xl font-bold text-indigo-700">{question.num1}</span>
               </div>
 
               {/* Operation symbol */}
               <div className="text-purple-500">{getOperationSymbol()}</div>
 
               {/* Second number */}
-              <div className="bg-gradient-to-b from-indigo-400 to-purple-500 rounded-full shadow-md px-6 py-4 min-w-[80px] text-center text-white">
-                {question.num2}
+              <div className="flex items-center justify-center bg-gradient-to-b from-indigo-400 to-purple-500 rounded-full shadow-md w-16 h-16 md:w-20 md:h-20">
+                <span className="text-4xl md:text-5xl font-bold text-white">{question.num2}</span>
               </div>
 
               {/* Equals sign */}
-              <div className="text-indigo-700">=</div>
+              <div className="text-4xl md:text-5xl font-bold text-indigo-700">=</div>
 
               {/* Answer/question mark */}
               <div
-                className={`rounded-full shadow-md px-6 py-4 min-w-[80px] text-center ${
-                  answered
-                    ? isCorrect
-                      ? "bg-green-100 text-green-600"
-                      : "bg-red-100 text-red-600"
-                    : "bg-white text-pink-500"
+                className={`flex items-center justify-center rounded-full shadow-md w-16 h-16 md:w-20 md:h-20 ${
+                  answered ? (isCorrect ? "bg-green-100" : "bg-red-100") : "bg-white"
                 }`}
               >
-                {answered ? question.answer : "?"}
+                <span
+                  className={`text-4xl md:text-5xl font-bold ${
+                    answered ? (isCorrect ? "text-green-600" : "text-red-600") : "text-pink-500"
+                  }`}
+                >
+                  {answered ? question.answer : "?"}
+                </span>
               </div>
             </div>
           </div>
@@ -376,7 +456,7 @@ export function GameScreen({
           {options.map((option, index) => (
             <Button
               key={index}
-              className={`h-16 text-4xl font-bold rounded-xl shadow-md ${
+              className={`h-16 text-3xl font-bold rounded-xl shadow-md ${
                 answered && option === question.answer
                   ? "bg-green-500 hover:bg-green-600"
                   : answered && option === selectedOption && option !== question.answer
@@ -386,7 +466,7 @@ export function GameScreen({
                       : "bg-gradient-to-r from-indigo-400 to-purple-400 hover:from-indigo-500 hover:to-purple-500"
               }`}
               onClick={() => handleOptionSelect(option)}
-              disabled={answered}
+              disabled={answered || isPaused}
             >
               {option}
             </Button>
@@ -409,6 +489,57 @@ export function GameScreen({
           </div>
         )}
       </Card>
+
+      {/* Pause overlay */}
+      <AnimatePresence>
+        {isPaused && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4"
+            >
+              <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
+                Game Paused
+              </h2>
+
+              <div className="space-y-4">
+                <Button
+                  onClick={togglePause}
+                  className="w-full h-14 text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                >
+                  <Play className="mr-2 h-5 w-5" /> Resume Game
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleExit}
+                  className="w-full h-14 text-xl font-bold border-2 border-pink-400 text-pink-600"
+                >
+                  <Home className="mr-2 h-5 w-5" /> Exit to Menu
+                </Button>
+
+                <div className="flex justify-between gap-4">
+                  <Button variant="ghost" onClick={toggleSound} className="flex-1 h-12 text-lg font-medium">
+                    {soundEnabled ? <Volume2 className="mr-2 h-5 w-5" /> : <VolumeX className="mr-2 h-5 w-5" />}
+                    {soundEnabled ? "Sound On" : "Sound Off"}
+                  </Button>
+
+                  <Button variant="ghost" className="flex-1 h-12 text-lg font-medium">
+                    <Settings className="mr-2 h-5 w-5" /> Settings
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hidden audio elements */}
       <audio src="/sounds/correct.mp3" ref={correctSoundRef} />

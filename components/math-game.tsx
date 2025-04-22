@@ -13,6 +13,7 @@ import { ScoreScreen } from "@/components/score-screen"
 import { SplashScreen } from "@/components/splash-screen"
 
 type Operation = "addition" | "subtraction" | "multiplication" | "division"
+type Difficulty = "easy" | "medium" | "hard"
 
 export function MathGame() {
   const [gameState, setGameState] = useState<"splash" | "setup" | "playing" | "score">("splash")
@@ -25,6 +26,7 @@ export function MathGame() {
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [timerDuration, setTimerDuration] = useState<number>(10)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium")
 
   // Sound references
   const buttonSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -49,6 +51,21 @@ export function MathGame() {
       // Stop all sounds when component unmounts
       if (bgMusicRef.current) bgMusicRef.current.pause()
     }
+  }, [])
+
+  useEffect(() => {
+    // Load saved preferences from localStorage
+    const savedOperation = localStorage.getItem("mathGameOperation") as Operation | null
+    const savedNumber = localStorage.getItem("mathGameNumber")
+    const savedRounds = localStorage.getItem("mathGameRounds")
+    const savedTimerDuration = localStorage.getItem("mathGameTimerDuration")
+    const savedDifficulty = localStorage.getItem("mathGameDifficulty") as Difficulty | null
+
+    if (savedOperation) setOperation(savedOperation)
+    if (savedNumber) setNumber(Number.parseInt(savedNumber))
+    if (savedRounds) setRounds(Number.parseInt(savedRounds))
+    if (savedTimerDuration) setTimerDuration(Number.parseInt(savedTimerDuration))
+    if (savedDifficulty) setDifficulty(savedDifficulty)
   }, [])
 
   const playSound = (type: "button" | "start") => {
@@ -181,6 +198,45 @@ export function MathGame() {
     }
   }
 
+  // Updated difficulty settings with new number ranges
+  const getDifficultySettings = (diff: Difficulty) => {
+    switch (diff) {
+      case "easy":
+        return {
+          timerMultiplier: 1.5,
+          minNumber: 1,
+          maxNumber: 20,
+          icon: "🐣",
+          color: "from-green-500 to-teal-500",
+          hoverColor: "hover:from-green-600 hover:to-teal-600",
+          borderColor: "border-green-300",
+          description: "Numbers 1-20",
+        }
+      case "medium":
+        return {
+          timerMultiplier: 1,
+          minNumber: 21,
+          maxNumber: 99,
+          icon: "🦊",
+          color: "from-indigo-500 to-purple-500",
+          hoverColor: "hover:from-indigo-600 hover:to-purple-600",
+          borderColor: "border-indigo-300",
+          description: "Numbers 21-99",
+        }
+      case "hard":
+        return {
+          timerMultiplier: 0.7,
+          minNumber: 100,
+          maxNumber: 999,
+          icon: "🐉",
+          color: "from-red-500 to-orange-500",
+          hoverColor: "hover:from-red-600 hover:to-orange-600",
+          borderColor: "border-red-300",
+          description: "Numbers 100-999",
+        }
+    }
+  }
+
   const handleSplashComplete = () => {
     setGameState("setup")
   }
@@ -189,7 +245,6 @@ export function MathGame() {
     <div className="container mx-auto max-w-md">
       <AnimatePresence mode="wait">
         {gameState === "splash" && <SplashScreen onComplete={handleSplashComplete} />}
-
         {gameState !== "splash" && (
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -231,7 +286,6 @@ export function MathGame() {
             </div>
           </motion.div>
         )}
-
         {gameState === "setup" && (
           <motion.div
             key="setup"
@@ -244,7 +298,6 @@ export function MathGame() {
               <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 Game Setup
               </h2>
-
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
                   <motion.span
@@ -269,6 +322,7 @@ export function MathGame() {
                         onClick={() => {
                           setOperation(op)
                           playSound("button")
+                          localStorage.setItem("mathGameOperation", op)
                         }}
                       >
                         <div className="flex flex-col items-center">
@@ -280,7 +334,6 @@ export function MathGame() {
                   ))}
                 </div>
               </div>
-
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
                   <motion.span
@@ -305,6 +358,7 @@ export function MathGame() {
                         onClick={() => {
                           setNumber(num)
                           playSound("button")
+                          localStorage.setItem("mathGameNumber", num.toString())
                         }}
                       >
                         {num}
@@ -313,7 +367,46 @@ export function MathGame() {
                   ))}
                 </div>
               </div>
-
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
+                    className="mr-2"
+                  >
+                    🏆
+                  </motion.span>
+                  Difficulty Level
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {(["easy", "medium", "hard"] as Difficulty[]).map((diff) => {
+                    const settings = getDifficultySettings(diff)
+                    return (
+                      <motion.div key={diff} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant={difficulty === diff ? "default" : "outline"}
+                          className={`h-24 text-lg w-full ${
+                            difficulty === diff
+                              ? `bg-gradient-to-r ${settings.color} ${settings.hoverColor} border-4 ${settings.borderColor}`
+                              : "border-4 border-purple-200"
+                          }`}
+                          onClick={() => {
+                            setDifficulty(diff)
+                            playSound("button")
+                            localStorage.setItem("mathGameDifficulty", diff)
+                          }}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="text-2xl mb-1">{settings.icon}</span>
+                            <span className="font-bold capitalize">{diff}</span>
+                            <span className="text-xs mt-1">{settings.description}</span>
+                          </div>
+                        </Button>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </div>
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
                   <motion.span
@@ -327,11 +420,14 @@ export function MathGame() {
                 </h3>
                 <div className="px-4">
                   <Slider
-                    defaultValue={[5]}
+                    defaultValue={[rounds]}
                     max={30}
                     min={5}
                     step={5}
-                    onValueChange={(value) => setRounds(value[0])}
+                    onValueChange={(value) => {
+                      setRounds(value[0])
+                      localStorage.setItem("mathGameRounds", value[0].toString())
+                    }}
                     className="py-6"
                   />
                   <div className="flex justify-between text-sm text-purple-500 mt-2">
@@ -341,7 +437,6 @@ export function MathGame() {
                   </div>
                 </div>
               </div>
-
               <div className="mb-10">
                 <h3 className="text-xl font-semibold mb-4 text-purple-600 flex items-center">
                   <motion.span
@@ -355,11 +450,14 @@ export function MathGame() {
                 </h3>
                 <div className="px-4">
                   <Slider
-                    defaultValue={[10]}
+                    defaultValue={[timerDuration]}
                     min={5}
                     max={20}
                     step={1}
-                    onValueChange={(value) => setTimerDuration(value[0])}
+                    onValueChange={(value) => {
+                      setTimerDuration(value[0])
+                      localStorage.setItem("mathGameTimerDuration", value[0].toString())
+                    }}
                     className="py-6"
                   />
                   <div className="flex justify-between text-sm text-purple-500 mt-2">
@@ -369,7 +467,6 @@ export function MathGame() {
                   </div>
                 </div>
               </div>
-
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   onClick={startGame}
@@ -381,7 +478,6 @@ export function MathGame() {
             </Card>
           </motion.div>
         )}
-
         {gameState === "playing" && (
           <GameScreen
             operation={operation}
@@ -390,10 +486,12 @@ export function MathGame() {
             totalRounds={rounds}
             onAnswer={handleAnswer}
             score={score}
-            timerDuration={timerDuration}
+            timerDuration={timerDuration * getDifficultySettings(difficulty).timerMultiplier}
+            onExit={resetGame}
+            difficulty={difficulty}
+            difficultySettings={getDifficultySettings(difficulty)}
           />
         )}
-
         {gameState === "score" && <ScoreScreen score={score} totalRounds={rounds} onPlayAgain={resetGame} />}
       </AnimatePresence>
 

@@ -492,7 +492,17 @@ export function MathGame() {
             difficultySettings={getDifficultySettings(difficulty)}
           />
         )}
-        {gameState === "score" && <ScoreScreen score={score} totalRounds={rounds} onPlayAgain={resetGame} />}
+        {gameState === "score" && (
+          <ScoreScreen
+            score={score}
+            totalRounds={rounds}
+            onPlayAgain={resetGame}
+            operation={operation}
+            numberUsed={number}
+            timerDuration={timerDuration}
+            difficulty={difficulty}
+          />
+        )}
       </AnimatePresence>
 
       {/* Hidden audio elements */}

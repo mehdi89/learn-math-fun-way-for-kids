@@ -1,22 +1,47 @@
 "use client"
 import { useRef, useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { Trophy, Star, RotateCcw, Volume2, VolumeX, Home, Share2, Download, Sparkles } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Trophy, Star, RotateCcw, Volume2, VolumeX, Home, Download, Sparkles, BarChart } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { NicknameModal } from "./nickname-modal"
+import { Leaderboard } from "./leaderboard"
+import { HighScoreAlert } from "./high-score-alert"
+import { saveScore, checkHighScore, getUserRank, type ScoreData } from "@/app/actions"
 
 interface ScoreScreenProps {
   score: number
   totalRounds: number
   onPlayAgain: () => void
+  operation: string
+  numberUsed: number
+  timerDuration: number
+  difficulty: string
 }
 
-export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProps) {
+export function ScoreScreen({
+  score,
+  totalRounds,
+  onPlayAgain,
+  operation,
+  numberUsed,
+  timerDuration,
+  difficulty,
+}: ScoreScreenProps) {
   const percentage = Math.round((score / totalRounds) * 100)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [showNicknameModal, setShowNicknameModal] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [savedScoreId, setSavedScoreId] = useState<number | null>(null)
+  const [userRank, setUserRank] = useState<number | null>(null)
+  const [totalScores, setTotalScores] = useState<number>(0)
+  const [isHighScore, setIsHighScore] = useState(false)
+  const [previousBest, setPreviousBest] = useState(0)
+  const [showHighScoreAlert, setShowHighScoreAlert] = useState(false)
+  const [scoreSubmitted, setScoreSubmitted] = useState(false)
 
   // Sound references
   const victorySoundRef = useRef<HTMLAudioElement | null>(null)
@@ -34,12 +59,13 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
     if (clickSoundRef.current) clickSoundRef.current.volume = 0.3
     if (starSoundRef.current) starSoundRef.current.volume = 0.4
 
-    // We don't auto-play victory sound anymore - it will play on first interaction
-
     // Show confetti after a short delay
     const timer = setTimeout(() => {
       setShowConfetti(true)
     }, 500)
+
+    // Check if this is a high score
+    checkIfHighScore()
 
     return () => {
       // Stop all sounds when component unmounts
@@ -51,6 +77,64 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
       }
     }
   }, [])
+
+  const checkIfHighScore = async () => {
+    const scoreData: ScoreData = {
+      nickname: "",
+      operation,
+      numberUsed,
+      rounds: totalRounds,
+      timerDuration,
+      difficulty,
+      score,
+      percentage,
+    }
+
+    const result = await checkHighScore(scoreData)
+
+    if (result.isHighScore) {
+      setIsHighScore(true)
+      setPreviousBest(result.previousBest)
+      // Show nickname modal after a short delay
+      setTimeout(() => {
+        setShowNicknameModal(true)
+      }, 1500)
+    }
+  }
+
+  const handleSaveScore = async (nickname: string) => {
+    setShowNicknameModal(false)
+
+    const scoreData: ScoreData = {
+      nickname,
+      operation,
+      numberUsed,
+      rounds: totalRounds,
+      timerDuration,
+      difficulty,
+      score,
+      percentage,
+    }
+
+    const result = await saveScore(scoreData)
+
+    if (result.success) {
+      setSavedScoreId(result.id)
+      setScoreSubmitted(true)
+
+      // Get user's rank
+      const rankResult = await getUserRank(result.id)
+      if (rankResult.rank) {
+        setUserRank(rankResult.rank)
+        setTotalScores(rankResult.total)
+      }
+
+      // Show high score alert if it's a high score
+      if (isHighScore) {
+        setShowHighScoreAlert(true)
+      }
+    }
+  }
 
   const playSound = (type: "click" | "star" | "victory") => {
     if (!soundEnabled) return
@@ -168,8 +252,16 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
             {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-            <Share2 className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full"
+            onClick={() => {
+              playSound("click")
+              setShowLeaderboard(true)
+            }}
+          >
+            <BarChart className="h-5 w-5" />
           </Button>
         </div>
 
@@ -242,6 +334,19 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
             <span className="inline-block px-6 py-2 bg-indigo-100 rounded-full">{percentage}%</span>
           </motion.div>
 
+          {userRank && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
+              className="mb-6 p-4 bg-indigo-50 rounded-xl border-2 border-indigo-100"
+            >
+              <p className="text-lg font-medium text-indigo-700">
+                Your Rank: <span className="font-bold">{userRank}</span> of {totalScores}
+              </p>
+            </motion.div>
+          )}
+
           <div className="flex justify-center gap-3 mb-8">
             {[...Array(5)].map((_, i) => (
               <motion.div
@@ -290,6 +395,22 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
               {getMessage()}
             </motion.div>
           </motion.div>
+
+          {!scoreSubmitted && !isHighScore && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.7 }}
+              className="mb-6"
+            >
+              <Button
+                onClick={() => setShowNicknameModal(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+              >
+                Save Your Score
+              </Button>
+            </motion.div>
+          )}
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <motion.div
@@ -394,6 +515,33 @@ export function ScoreScreen({ score, totalRounds, onPlayAgain }: ScoreScreenProp
       <audio src="/sounds/victory.mp3" ref={victorySoundRef} />
       <audio src="/sounds/click.mp3" ref={clickSoundRef} />
       <audio src="/sounds/star.mp3" ref={starSoundRef} />
+
+      {/* Modals */}
+      <AnimatePresence>
+        {showNicknameModal && (
+          <NicknameModal
+            onSubmit={handleSaveScore}
+            onCancel={() => setShowNicknameModal(false)}
+            isHighScore={isHighScore}
+          />
+        )}
+
+        {showLeaderboard && (
+          <Leaderboard
+            operation={operation}
+            numberUsed={numberUsed}
+            rounds={totalRounds}
+            timerDuration={timerDuration}
+            difficulty={difficulty}
+            onClose={() => setShowLeaderboard(false)}
+            userScoreId={savedScoreId || undefined}
+          />
+        )}
+
+        {showHighScoreAlert && (
+          <HighScoreAlert score={score} previousBest={previousBest} onClose={() => setShowHighScoreAlert(false)} />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

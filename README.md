@@ -1,14 +1,12 @@
 # Learn Math Fun Way for Kids
 
-![Math Fun Way Logo](public/placeholder-logo.png)
-
 A fun, interactive math learning application designed to help kids practice basic arithmetic operations through engaging gameplay.
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/mehedi-hasans-projects-6090fbeb/v0-animated-math-app)
 
 ## 🚀 Live Demo
 
-Try the app now: [Learn Math Fun Way for Kids](https://v0-animated-math-app.vercel.app/)
+Try the app now: [Learn Math Fun Way for Kids](https://learn-math-kids.vercel.app/)
 
 ## ✨ Features
 
@@ -36,19 +34,15 @@ Clone and run this application locally with these steps:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/learn-math-fun-way-for-kids.git
+git clone https://github.com/mehdi89/learn-math-fun-way-for-kids.git
 
 # Navigate to the project directory
 cd learn-math-fun-way-for-kids
 
 # Install dependencies
-npm install
-# or
 pnpm install
 
 # Start the development server
-npm run dev
-# or
 pnpm dev
 ```
 
